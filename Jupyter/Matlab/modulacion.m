@@ -105,4 +105,13 @@ end
 
 file_name = fullfile(output_folder, 'Modulacion_FSK_GFSK.png');  
 saveas(gcf, file_name);
+% Exportar únicamente la señal GFSK a CSV (una sola columna)
+export_folder = './csv';
+if ~exist(export_folder, 'dir'), mkdir(export_folder); end
+
+x_gfsk = gfsk_signal(:);                         % asegurar columna
+writematrix(x_gfsk, fullfile(export_folder, 'gfsk_signal.csv'));
+
+fprintf('[Export] gfsk_signal.csv guardado en %s (N=%d)\n', export_folder, numel(x_gfsk));
+
 
