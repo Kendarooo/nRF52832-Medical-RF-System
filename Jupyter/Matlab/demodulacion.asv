@@ -1,0 +1,89 @@
+%% DEMODULACIÓN FSK / GFSK (discriminador de frecuencia)
+rx_file = './csv/gfsk_rx_awgn_6dB_seed58.csv';  % ajusta la ruta si hace falta
+rx = readmatrix(rx_file);       % o csvread(rx_file) en Octave viejo
+rx = rx(:);                     % asegurar vector columna
+
+% Parámetros (los mismos que usaste en el TX)
+bits_per_second    = 1e3;      % 1 kbit/s
+samples_per_bit    = 100;      % igual que en el modulador
+sampling_frequency = bits_per_second * samples_per_bit;
+carrier_frequency  = 2e3;      % misma fc que en el TX
+% Puedes elegir qué señal demodular:
+% rx = fsk_signal(:);   % FSK "simple"
+%rx = gfsk_signal(:);     % GFSK BLE
+
+rx = rx(:);  % asegurar columna
+
+% --- 1) Señal analítica y fase instantánea ---
+z   = hilbert(rx);                % señal analítica (I + jQ)
+phi = unwrap(angle(z));           % fase instantánea [rad]
+
+% --- 2) Frecuencia instantánea ---
+inst_freq = [0; diff(phi)] * sampling_frequency / (2*pi);  % [Hz]
+
+% (Opcional) Suavizar un poco la frecuencia instantánea
+%inst_freq = smoothdata(inst_freq, 'movmean', round(samples_per_bit/2));
+
+% --- 3) Promediar por intervalo de bit ---
+n_bits_rx = floor(length(inst_freq) / samples_per_bit);  % nº de bits que alcanzan
+inst_freq = inst_freq(1 : n_bits_rx * samples_per_bit);  % recortar a múltiplo entero
+inst_freq_mat = reshape(inst_freq, samples_per_bit, n_bits_rx);
+
+freq_por_bit = mean(inst_freq_mat, 1);   % frecuencia media en cada bit
+
+% --- 4) Decisión de bit ---
+% En tu modulador: freq = fc ± Δf, así que:
+%   frecuencia > fc  → nivel +1 (bit 1)
+%   frecuencia < fc  → nivel -1 (bit 0)
+bits_rec = freq_por_bit > carrier_frequency;    % vector lógico 0/1
+
+bits_rec = bits_rec(:);   % columna
+
+
+%% Comparar contra la secuencia original (si está en el workspace)
+
+n_bits_tx = min(length(bit_stream), length(bits_rec));
+bits_tx   = bit_stream(1:n_bits_tx);
+bits_hat  = bits_rec(1:n_bits_tx);
+
+num_errores = sum(bits_tx ~= bits_hat);
+ber         = num_errores / n_bits_tx;
+
+fprintf('\n[Demod] Bits comparados: %d\n', n_bits_tx);
+fprintf('[Demod] Errores: %d  → BER = %.3e\n', num_errores, ber);
+
+
+%% (Opcional) Visualizar unos cuantos bits demodulados
+
+num_bits_plot = 20;
+nbp = min([num_bits_plot, n_bits_rx, n_bits_tx]);
+
+figure('Name','Demodulación GFSK','Position',[100 100 900 600]);
+
+subplot(2,1,1);
+plot(freq_por_bit(1:nbp),'o-','LineWidth',1.5); grid on;
+hold on;
+yline(carrier_frequency,'r--','f_c');
+xlabel('Índice de bit'); ylabel('Frecuencia media [Hz]');
+title('Frecuencia media por bit');
+
+subplot(2,1,2);
+stem(bits_tx(1:nbp),'filled'); hold on;
+stem(bits_hat(1:nbp)+0.05,'r:'); grid on;
+xlabel('Índice de bit'); ylabel('Bit');
+legend('Tx','Rx (demod)','Location','best');
+title('Bits transmitidos vs. demodulados');
+%% Exportar bits demodulados a CSV (una sola columna)
+
+demod_folder = './csv';
+if ~exist(demod_folder, 'dir')
+    mkdir(demod_folder);
+end
+
+bits_csv = bits_hat(:);  % asegurar vector columna
+
+demod_file = fullfile(demod_folder, 'gfsk_bits_demod.csv');
+writematrix(bits_csv, demod_file);
+
+fprintf('[Export] gfsk_bits_demod.csv guardado en %s (N_bits=%d)\n', ...
+        demod_folder, numel(bits_csv));
