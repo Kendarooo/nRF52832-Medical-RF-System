@@ -1,4 +1,4 @@
-%% DEMODULACIÓN GFSK (DIF BLE) SOLO CON LA SALIDA DEL CANAL
+%% DEMODULACIÓN GFSK
 
 % 1) Cargar señal recibida desde el canal
 rx_file = './csv/gfsk_rx_awgn_6dB_seed58.csv';
@@ -10,7 +10,7 @@ bits_per_second    = 1e3;
 samples_per_bit    = 100;      
 sampling_frequency = bits_per_second * samples_per_bit;
 carrier_frequency  = 2e3;      
-
+tStart = tic; % inicia temporización
 % 3) Señal analítica y fase
 z   = hilbert(rx);                % señal analítica (I + jQ)
 phi = unwrap(angle(z));           % fase instantánea [rad]
@@ -28,7 +28,9 @@ freq_por_bit  = mean(inst_freq_mat, 1);
 bits_rec = freq_por_bit > carrier_frequency;   % vector lógico 0/1
 bits_hat = bits_rec(:);                        % nombre "oficial" para exportar
 
-%% (Opcional) ver los primeros bits demodulados
+elapsed_proc = toc(tStart); %finaliza temporización
+fprintf('Tiempo de procesamiento: %.6f s\n', elapsed_proc);
+%% ver los primeros bits demodulados
 num_bits_plot = 20;
 nbp = min(num_bits_plot, numel(bits_hat));
 
