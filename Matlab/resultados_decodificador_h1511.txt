@@ -1,0 +1,16 @@
+Resultados decodificador Hamming(15,11)
+--------------------------------------
+Eb/N0 (dB) o SNR:            1.0
+Bits de código usados:       1395
+Errores brutos (código):     26
+BER bruta (código):          1.863799e-02
+BER bruta (código) [%]:      1.86
+Palabras decodificadas:      93
+Errores corregidos H(15,11): 20
+% errores corregidos:        76.92
+
+--- A nivel de información ---
+Bits info comparados:        1023
+Errores info (post-decod):   9
+BER info (H1511):            8.797654e-03
+BER info (H1511) [%]:        0.88
